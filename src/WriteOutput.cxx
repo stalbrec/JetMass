@@ -73,7 +73,7 @@ WriteOutput::WriteOutput(uhh2::Context & ctx){
   }
 
 
-  MatchV_sel.reset(new MatchingSelection(ctx, is_WSample ? MatchingSelection::oIsMergedGenW : MatchingSelection::oIsMergedGenZ ));
+  MatchV_sel.reset(new MatchingSelection(ctx, is_WSample ? MatchingSelection::oIsMergedGenWNotFromTop : MatchingSelection::oIsMergedGenZ ));
 
 }
 
