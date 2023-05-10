@@ -473,11 +473,13 @@ def finalize_ax(
     ax: plt.Axes, font_size: float = 20.0, fname: str = None, reversered_legend: bool = True, year: str = ""
 ) -> None:
     f = ax.get_figure()
-    extra_text = ", private work"
+    # extra_text = ", private work"
     if year != "":
-        hep.cms.label(label=extra_text, ax=ax, fontsize=font_size, year=year)
+        hep.label.exp_label(llabel="Private work (CMS data/simulation)", ax=ax, fontsize=font_size, year=year)
+        # hep.cms.label(label=extra_text, ax=ax, fontsize=font_size, year=year)
     else:
-        hep.cms.text(extra_text, ax=ax, fontsize=font_size)
+        # hep.cms.text(extra_text, ax=ax, fontsize=font_size)
+        hep.label.exp_label(llabel="Private work (CMS data/simulation)", ax=ax, fontsize=font_size)
 
     handles, labels = ax.get_legend_handles_labels()
     if reversered_legend:
@@ -575,7 +577,7 @@ if __name__ == "__main__":
                         label=f"{region} {year} JEC up",
                     )
 
-            finalize_ax(ax, fname=f"JMSSF_07-03-23/{region}_{year}_comparison.pdf", year=year)
+            finalize_ax(ax, fname=f"JMSSF_JERC_03/{region}_{year}_comparison.pdf", year=year)
             # plt.gca().set_prop_cycle(None)
 
     plotter["07_03_23"] = create_plotter("fitResults_07-03-23.json", years, regions)
@@ -593,3 +595,36 @@ if __name__ == "__main__":
                     fmt=".",
                 )
             finalize_ax(ax, fname=f"JMSSF_07-03-23/{date}_{region}_year_comparison.pdf")
+
+    suffix_labels = {
+        "NOJEC": "(noJEC on mass)",
+        "ENDCAP": r"$1.3<|\eta|<2.4$",
+        "BARREL": r"$|\eta|<1.3$",
+    }
+    for suffix in ["NOJEC", "BARREL", "ENDCAP"]:
+
+        fitResults_nojec = json.load(open("fitResults_14-03-23.json"))
+        plotter = JMSPlotter(fitResults_nojec, [f"Combined{year}{suffix}" for year in years], legacy_json_format=False)
+        plotter.construct_hists()
+        f, ax = setup_ax(10, 7)
+        for year in years:
+            plotter.dHists[f"Combined{year}{suffix}"].plot_errorbar(
+                ax=ax,
+                split_uncertainty=False,
+                alpha=0.8,
+                label=f"Combined {year} {suffix_labels[suffix]}",
+                linewidth=0.9,
+                fmt=".",
+            )
+        finalize_ax(ax, fname=f"JMSSF_JERC_03/Combiend_year_comparison_{suffix}.pdf")
+        for year in years:
+            f, ax = setup_ax(10, 7)
+            plotter.dHists[f"Combined{year}{suffix}"].plot_errorbar(
+                ax=ax,
+                split_uncertainty=False,
+                alpha=0.8,
+                label=f"Combined {year} {suffix_labels[suffix]}",
+                linewidth=0.9,
+                fmt=".",
+            )
+            finalize_ax(ax, fname=f"JMSSF_JERC_03/Combiend_{year}_comparison_{suffix}.pdf",year=year)
