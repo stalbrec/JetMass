@@ -15,9 +15,8 @@ import correctionlib
 hep.style.use("CMS")
 
 
-jetmass_path = "/afs/desy.de/user/a/albrechs/xxl/af-cms/UHH2/10_6_28/CMSSW_10_6_28/src/UHH2/JetMass"
-ddtmaps_n2_path = f"{jetmass_path}/Histograms/ddtmaps_n2.npy"
-ddtmaps_particlenet_path = f"{jetmass_path}/Histograms/ddtmaps_particlenet.npy"
+ddtmaps_n2_path = "/nfs/dust/cms/user/hinzmann/jetmass/ddtmaps/ddtmaps_n2.npy"
+ddtmaps_particlenet_path = "/nfs/dust/cms/user/hinzmann/jetmass/ddtmaps/ddtmaps_particlenet.npy"
 
 
 def load_tree(
@@ -64,11 +63,11 @@ def load_tree(
 
 def create_hists(events, year, n2_max=-999.0, nomatching=False):
     trigger_scalefactors = correctionlib.CorrectionSet.from_file(
-        "/afs/desy.de/user/a/albrechs/xxl/af-cms/UHH2/10_6_28/CMSSW_10_6_28/src/UHH2/JetMass/notebooks/data/"
+        "/nfs/dust/cms/user/hinzmann/jetmass/JetMassNotebooks/data/"
         + "HLT_AK8PFJet_MC_trigger_sf_c2e731345f.json"
     )
     msd_corrector = correctionlib.CorrectionSet.from_file(
-        "/afs/desy.de/user/a/albrechs/xxl/af-cms/UHH2/10_6_28/CMSSW_10_6_28/src/UHH2/JetMass/python/"
+        "/nfs/dust/cms/user/hinzmann/jetmass/JetMass/python/"
         + jms_correction_files["notagger"]
     )[f"response_g_jec_{year}"]
     trigger_sf_evaluator_450 = trigger_scalefactors[f"HLT_AK8PFJet450_triggersf_{year}"]
@@ -300,6 +299,62 @@ def create_hists(events, year, n2_max=-999.0, nomatching=False):
         ]
         for region in ["", "_pass_dR", "_n2ddt", "_pNetddt"]
     }
+
+    ### Andreas code to print cross sections after gen-selection
+    lumis = {
+    "UL16preVFP": 19301.591954787407 / 1000.0,
+    "UL16postVFP": 16626.734093195286 / 1000.0,
+    "UL17": 41479.68052876168 / 1000.0,
+    "UL18": 59832.47533908866 / 1000.0,
+    }
+    lumis["RunII"] = sum(lumis[year] for year in ["UL16preVFP", "UL16postVFP", "UL17", "UL18"])
+    pt_gen_ax0 = hist.axis.Variable(np.array([500.0, np.inf]), name="ptgen", label=r"$p_{T,\mathrm{gen}}$ [GeV]")
+    msd_gen_ax0 = hist.axis.Variable(np.array([0., np.inf]), name="msdgen", label=r"$m_{\mathrm{SD,gen}}$ [GeV]")
+    hists["gen"] = hist.Hist(
+            pt_gen_ax0,
+            msd_gen_ax0,
+            storage=hist.storage.Weight(),
+        )
+    hists["gen"].fill(
+            ptgen=events.pt_gen_ak8,
+            msdgen=events.msd_gen_ak8,
+            weight=events.weight,
+        )
+    print("Gen no cut xsec =", hists["gen"].values().sum()/lumis[year])
+    hists["gen_pt"] = hist.Hist(
+            pt_gen_ax0,
+            msd_gen_ax0,
+            storage=hist.storage.Weight(),
+        )
+    hists["gen_pt"].fill(
+            ptgen=events.pt_gen_ak8[(events.pt_gen_ak8 > 650.0)],
+            msdgen=events.msd_gen_ak8[(events.pt_gen_ak8 > 650.0)],
+            weight=events.weight[(events.pt_gen_ak8 > 650.0)],
+        )
+    print("Gen pT cut xsec =", hists["gen_pt"].values().sum()/lumis[year])
+    hists["gen_pt_msd"] = hist.Hist(
+            pt_gen_ax0,
+            msd_gen_ax0,
+            storage=hist.storage.Weight(),
+        )
+    hists["gen_pt_msd"].fill(
+            ptgen=events.pt_gen_ak8[(events.pt_gen_ak8 > 650.0) & (events.msd_gen_ak8 > 30.0)],
+            msdgen=events.msd_gen_ak8[(events.pt_gen_ak8 > 650.0) & (events.msd_gen_ak8 > 30.0)],
+            weight=events.weight[(events.pt_gen_ak8 > 650.0) & (events.msd_gen_ak8 > 30.0)],
+        )
+    print("Gen pT, mSD cut xsec =", hists["gen_pt_msd"].values().sum()/lumis[year])
+    hists["gen_pt_msd_n2"] = hist.Hist(
+            pt_gen_ax0,
+            msd_gen_ax0,
+            storage=hist.storage.Weight(),
+        )
+    hists["gen_pt_msd_n2"].fill(
+            ptgen=events.pt_gen_ak8[(events.pt_gen_ak8 > 650.0) & (events.msd_gen_ak8 > 30.0) & (events.gentopjet_n2_0 < n2_max)],
+            msdgen=events.msd_gen_ak8[(events.pt_gen_ak8 > 650.0) & (events.msd_gen_ak8 > 30.0) & (events.gentopjet_n2_0 < n2_max)],
+            weight=events.weight[(events.pt_gen_ak8 > 650.0) & (events.msd_gen_ak8 > 30.0) & (events.gentopjet_n2_0 < n2_max)],
+        )
+    print("Gen pT, mSD, N2 cut xsec =", hists["gen_pt_msd_n2"].values().sum()/lumis[year])
+    #####
 
     return hists
 
